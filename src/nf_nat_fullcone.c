@@ -1223,12 +1223,12 @@ static unsigned int nf_nat_handle_prerouting(u8 nfproto, struct sk_buff *skb, un
 	if (nfproto == NFPROTO_IPV4) {
 		newrange->min_addr.ip = mapping->int_addr;
 		newrange->max_addr.ip = mapping->int_addr;
+		newrange->min_proto.udp.port = cpu_to_be16(mapping->int_port);
 	} else if (nfproto == NFPROTO_IPV6) {
 		newrange->min_addr = mapping_6->int_addr;
 		newrange->max_addr = mapping_6->int_addr;
+		newrange->min_proto.udp.port = cpu_to_be16(mapping_6->int_port);
 	}
-
-	newrange->min_proto.udp.port = cpu_to_be16(mapping->int_port);
 	newrange->max_proto = newrange->min_proto;
 
 	if (nfproto == NFPROTO_IPV4) {
