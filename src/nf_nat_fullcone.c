@@ -91,8 +91,6 @@ static char *fullcone_nf_ct_stringify_tuple6(const struct nf_conntrack_tuple
 /* non-atomic: can only be called serially within lock zones. */
 static char *nf_ct_stringify_tuple(const struct nf_conntrack_tuple *t);
 
-static __be32 get_device_ip(const struct net_device *dev);
-
 #if IS_ENABLED(CONFIG_NF_NAT_IPV6) || (IS_ENABLED(CONFIG_IPV6) && LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0))
 static struct nat_mapping6 *allocate_mapping6(const union nf_inet_addr
 					      *int_addr,
@@ -299,33 +297,6 @@ void nf_nat_fullcone_dying_tuple_list_add(struct list_head *new_dying)
 }
 
 EXPORT_SYMBOL_GPL(nf_nat_fullcone_dying_tuple_list_add);
-
-static __be32 get_device_ip(const struct net_device *dev)
-{
-	struct in_device *in_dev;
-	struct in_ifaddr *if_info;
-	__be32 result;
-
-	if (dev == NULL) {
-		return 0;
-	}
-
-	rcu_read_lock();
-	in_dev = dev->ip_ptr;
-	if (in_dev == NULL) {
-		rcu_read_unlock();
-		return 0;
-	}
-	if_info = in_dev->ifa_list;
-	if (if_info) {
-		result = if_info->ifa_local;
-		rcu_read_unlock();
-		return result;
-	} else {
-		rcu_read_unlock();
-		return 0;
-	}
-}
 
 void nf_nat_fullcone_handle_dying_tuples(void)
 {
@@ -1296,6 +1267,10 @@ static unsigned int nf_nat_handle_postrouting(u8 nfproto, struct sk_buff *skb, u
 
 	__be32 ip;
 	union nf_inet_addr *ip_6;
+
+	const struct rtable *rt;
+	__be32 newsrc, nh;
+
 	/* NFPROTO specific def end */
 
 	WARN_ON(!(nfproto == NFPROTO_IPV4 || nfproto == NFPROTO_IPV6));
@@ -1331,10 +1306,14 @@ static unsigned int nf_nat_handle_postrouting(u8 nfproto, struct sk_buff *skb, u
 
 	} else {
 		if (nfproto == NFPROTO_IPV4) {
-			newrange->min_addr.ip = get_device_ip(skb->dev);
-			if (unlikely(!newrange->min_addr.ip))
+			rt = skb_rtable(skb);
+			nh = rt_nexthop(rt, ip_hdr(skb)->daddr);
+			newsrc = inet_select_addr(out, nh, RT_SCOPE_UNIVERSE);
+
+			if (unlikely(!newsrc))
 				return NF_DROP;
-			newrange->max_addr.ip = newrange->min_addr.ip;
+			newrange->min_addr.ip = newsrc;
+			newrange->max_addr.ip = newsrc;
 		} else if (nfproto == NFPROTO_IPV6) {
 			if (unlikely
 			    (nat_ipv6_dev_get_saddr
