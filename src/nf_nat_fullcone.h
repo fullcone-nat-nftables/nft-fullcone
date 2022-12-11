@@ -31,6 +31,14 @@
 #define NF_NAT_RANGE_PROTO_RANDOM_FULLY (1 << 4)
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
+/* Deprecated: use get_random_u32 instead. */
+static inline u32 prandom_u32(void)
+{
+	return get_random_u32();
+}
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 static inline int nf_ct_netns_get(struct net *net, u8 nfproto)
 {
