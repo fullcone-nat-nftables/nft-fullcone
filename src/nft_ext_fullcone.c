@@ -179,7 +179,11 @@ static int nft_fullcone_init(const struct nft_ctx *ctx, const struct nft_expr *e
 	return err;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0)
+static int nft_fullcone_dump(struct sk_buff *skb, const struct nft_expr *expr, bool reset)
+#else
 static int nft_fullcone_dump(struct sk_buff *skb, const struct nft_expr *expr)
+#endif
 {
 	const struct nft_fullcone *priv = nft_expr_priv(expr);
 
