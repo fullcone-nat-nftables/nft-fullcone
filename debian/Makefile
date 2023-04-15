@@ -20,5 +20,9 @@ install:
 	depmod -A
 	modprobe nft_fullcone
 
+uninstall:
+	rmmod nft_fullcone || echo "Please remove all nft rules with fullcone and run [rmmod nft_fullcone] manually" 
+	rm -f /lib/modules/$(KVERSION)/extra/nft_fullcone.ko && depmod -A
+
 clean:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
